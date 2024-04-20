@@ -17,18 +17,17 @@ from .smpl_param_regressor import build_smpl_parameter_regressor
 
 class FastMETRO_Body_Network(nn.Module):
     """FastMETRO for 3D human pose and mesh reconstruction from a single RGB image"""
-    def __init__(self, args, backbone, mesh_sampler, num_joints=14, num_vertices=431):
+    def __init__(self, args, mesh_sampler, num_joints=14, num_vertices=431):
         """
         Parameters:
             - args: Arguments
-            - backbone: CNN Backbone used to extract image features from the given image
             - mesh_sampler: Mesh Sampler used in the coarse-to-fine mesh upsampling
             - num_joints: The number of joint tokens used in the transformer decoder
             - num_vertices: The number of vertex tokens used in the transformer decoder
         """
         super().__init__()
         self.args = args
-        self.backbone = backbone
+        # self.backbone = backbone
         self.mesh_sampler = mesh_sampler
         self.num_joints = num_joints
         self.num_vertices = num_vertices
@@ -95,9 +94,9 @@ class FastMETRO_Body_Network(nn.Module):
         if args.use_smpl_param_regressor:
             self.smpl_parameter_regressor = build_smpl_parameter_regressor()
     
-    def forward(self, images):
-        device = images.device
-        batch_size = images.size(0)
+    def forward(self, img_features):
+        device = img_features.device
+        batch_size = img_features.size(0)
 
         # preparation
         cam_token = self.cam_token_embed.weight.unsqueeze(1).repeat(1, batch_size, 1) # 1 X batch_size X 512 
@@ -105,7 +104,6 @@ class FastMETRO_Body_Network(nn.Module):
         attention_mask = self.attention_mask.to(device) # (num_joints + num_vertices) X (num_joints + num_vertices)
         
         # extract image features through a CNN backbone
-        img_features = self.backbone(images) # batch_size X 2048 X 7 X 7
         _, _, h, w = img_features.shape
         img_features = self.conv_1x1(img_features).flatten(2).permute(2, 0, 1) # 49 X batch_size X 512 
         
@@ -152,18 +150,17 @@ class FastMETRO_Body_Network(nn.Module):
 
 class FastMETRO_Hand_Network(nn.Module):
     """FastMETRO for 3D hand mesh reconstruction from a single RGB image"""
-    def __init__(self, args, backbone, mesh_sampler, num_joints=21, num_vertices=195):
+    def __init__(self, args, mesh_sampler, num_joints=21, num_vertices=195):
         """
         Parameters:
             - args: Arguments
-            - backbone: CNN Backbone used to extract image features from the given image
             - mesh_sampler: Mesh Sampler used in the coarse-to-fine mesh upsampling
             - num_joints: The number of joint tokens used in the transformer decoder
             - num_vertices: The number of vertex tokens used in the transformer decoder
         """
         super().__init__()
         self.args = args
-        self.backbone = backbone
+        # self.backbone = backbone
         self.mesh_sampler = mesh_sampler
         self.num_joints = num_joints
         self.num_vertices = num_vertices
@@ -222,9 +219,9 @@ class FastMETRO_Hand_Network(nn.Module):
         temp_mask_2 = torch.cat([zeros_1, temp_mask_1], dim=1)
         self.attention_mask = torch.cat([zeros_2, temp_mask_2], dim=0)
     
-    def forward(self, images):
-        device = images.device
-        batch_size = images.size(0)
+    def forward(self, img_features):
+        device = img_features.device
+        batch_size = img_features.size(0)
 
         # preparation
         cam_token = self.cam_token_embed.weight.unsqueeze(1).repeat(1, batch_size, 1) # 1 X batch_size X 512 
@@ -232,7 +229,7 @@ class FastMETRO_Hand_Network(nn.Module):
         attention_mask = self.attention_mask.to(device) # (num_joints + num_vertices) X (num_joints + num_vertices)
         
         # extract image features through a CNN backbone
-        img_features = self.backbone(images) # batch_size X 2048 X 7 X 7
+        # img_features = self.backbone(images) # batch_size X 2048 X 7 X 7
         _, _, h, w = img_features.shape
         img_features = self.conv_1x1(img_features).flatten(2).permute(2, 0, 1) # 49 X batch_size X 512 
         
